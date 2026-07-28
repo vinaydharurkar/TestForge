@@ -1,58 +1,118 @@
-# Person A — Foundation, Auth & Users (Eclipse + PostgreSQL)
+# TestForge
 
-Java 17 · Spring Boot 3.3 · Spring Security (JWT) · Hibernate/JPA · PostgreSQL · Maven
+An interactive exam portal (backend). Admins create topics, questions and exams;
+students take exams, get graded automatically, and can see their results and weak
+areas. Built as a college group project by 4 people.
 
-This is Person A's slice: project foundation, JWT security, error handling,
-registration/login, and the user module. Everyone else builds on top of it,
-so it must run and be merged first.
+Java 17 · Spring Boot 3.3 · Spring Security (JWT) · PostgreSQL · Maven
 
-===================================================================
-SETUP IN ECLIPSE (one time)
-===================================================================
-1) INSTALL: JDK 17+, "Eclipse IDE for Enterprise Java and Web Developers",
-   PostgreSQL + pgAdmin, and Lombok (step 2).
+## What it does
 
-2) INSTALL LOMBOK INTO ECLIPSE (or you get hundreds of fake red errors):
-   - Download lombok.jar from https://projectlombok.org/download
-   - Run it:  java -jar lombok.jar
-   - Click "Specify location", choose your Eclipse install folder,
-     click Install/Update, Quit, then RESTART Eclipse.
-   - Verify in Help > About Eclipse (Lombok is listed).
+- Register / login with JWT tokens (roles: STUDENT and ADMIN)
+- Admin manages topics, a question bank, and exams
+- Students attempt exams and answers are graded automatically
+- Results are stored with a topic-wise breakdown so students see where they're weak
+- Analytics + a simple dashboard for admin and students
+- Automatic email reminders before an exam (scheduled job)
 
-3) DATABASE: in pgAdmin create a database named  testforge , open its Query
-   Tool, paste db/TestForge_schema.sql, run it. Confirm 9 tables appear.
+## Tech stack
 
-4) IMPORT: Eclipse > File > Import > Maven > "Existing Maven Projects" >
-   select this folder (the one with pom.xml) > Finish. Wait for Maven to
-   download dependencies. If red, right-click project > Maven > Update Project.
+- Java 17, Spring Boot 3.3
+- Spring Security with JWT for auth
+- Spring Data JPA / Hibernate
+- PostgreSQL
+- Maven (build)
+- Lombok (install it in your IDE or you'll see fake errors)
 
-5) CONFIGURE src/main/resources/application.properties:
-   - spring.datasource.password = your postgres password
-   - app.jwt.secret            = a long random string (>=32 chars)
-   (email settings aren't needed for Person A.)
+## Getting started
 
-6) RUN: right-click project > Run As > Spring Boot App
-   (or Run As > Java Application > TestForgeApplication).
-   Console: "Started TestForgeApplication" -> API live on port 8080.
-   Make an admin after registering once:
-     UPDATE users SET role='ADMIN' WHERE email='<your email>';
+You need JDK 17+, PostgreSQL, Maven, and Lombok set up in your IDE.
 
-If there's no "Spring Boot App" option: install "Spring Tools 4" from the
-Eclipse Marketplace, or just use Run As > Java Application.
+1. Create a database named `testforge` in pgAdmin.
+2. Open the query tool and run `db/TestForge_schema.sql`. This creates all the tables.
+3. Copy the example config and fill in your own values:
 
-===================================================================
-WHAT THIS SLICE CONTAINS
-===================================================================
-config/     SecurityConfig (JWT filter chain, BCrypt), CorsConfig
-security/   JwtService, JwtAuthenticationFilter, CustomUserDetailsService
-common/     enums: Role, EmailStatus, WeaknessStatus
-exception/  BadRequestException, ResourceNotFoundException, GlobalExceptionHandler
-auth/       register + login (controller, service, DTOs)
-user/       User entity, repository, service, controller, DTO, mapper
+   ```
+   copy src\main\resources\application.properties.example src\main\resources\application.properties
+   ```
 
-Endpoints:
-  POST /api/auth/register   (public)
-  POST /api/auth/login      (public)
-  GET  /api/users           (ADMIN)
-  GET  /api/users/{id}      (ADMIN)
-All non-auth endpoints need header: Authorization: Bearer <JWT>
+   Then edit `application.properties`:
+   - `spring.datasource.password` = your postgres password
+   - `app.jwt.secret` = a long random string (run `openssl rand -base64 32` to make one)
+
+4. Run the app. In Eclipse: right-click the project > Run As > Spring Boot App.
+   Or from a terminal: `mvn spring-boot:run`
+5. It starts on `http://localhost:8080`.
+
+Note: `application.properties` is gitignored on purpose because it has your password
+and secret. Only the `.example` file is in the repo. Everyone makes their own local copy.
+
+## First admin user
+
+The API only creates STUDENT accounts. To get an admin, register a normal user,
+then flip the role in the database:
+
+```sql
+UPDATE users SET role = 'ADMIN' WHERE email = 'you@example.com';
+```
+
+## API overview
+
+Auth is a Bearer token. Log in, copy the `token` from the response, and send it as
+a header on protected calls: `Authorization: Bearer <token>`.
+
+Public:
+- `POST /api/auth/register` - create a student account
+- `POST /api/auth/login` - get a token
+
+Topics (read = any logged-in user, write = admin):
+- `GET /api/topics`
+- `POST /api/topics`, `PUT /api/topics/{id}`, `DELETE /api/topics/{id}`
+
+Questions (admin only):
+- `GET /api/questions` (add `?topicId=3` to filter by topic)
+- `POST /api/questions`, `PUT /api/questions/{id}`, `DELETE /api/questions/{id}`
+
+Exams:
+- `GET /api/exams` - list exams
+- `GET /api/exams/{id}/attempt` - questions for taking the exam (no answers shown)
+- admin: `GET /api/exams/all`, `POST /api/exams`, `PUT`, `DELETE`, `POST /api/exams/{id}/questions`
+
+Results:
+- `POST /api/exams/{id}/submit` - submit answers, get graded
+- `GET /api/results/{studentId}` - a student's past results
+- `GET /api/results/detail/{resultId}` - full breakdown of one result
+
+Users (admin only):
+- `GET /api/users`, `GET /api/users/{id}`
+
+Analytics & dashboard (admin only unless noted):
+- `GET /api/analytics/student/{id}`, `GET /api/analytics/difficult-topics`
+- `GET /api/dashboard/student/{id}`, `GET /api/dashboard/admin`
+
+Reminders (admin only):
+- `POST /api/reminders/send/{examId}`, `GET /api/reminders/logs`
+
+## Who built what
+
+| Person | Area |
+|--------|------|
+| A | Project setup, config, security (JWT), auth, users, shared exception handling |
+| B | Topics, question bank, exams |
+| C | Exam attempts and grading (results, student answers) |
+| D | Analytics, reports, email notifications, dashboards |
+
+## Branches
+
+- `dev` - where everyone's work is merged and integrated
+- `test` - promoted from dev once things are stable
+- `final-production` - the release branch
+
+Each person works on their own feature branch and opens a pull request into `dev`.
+
+## Notes
+
+- If you see lots of red errors right after importing, it's almost always Lombok
+  not installed in the IDE. Install it and restart.
+- If a call returns 401, you forgot the token. If it returns 403, your token is a
+  student but the endpoint needs an admin.
