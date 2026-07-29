@@ -1,5 +1,6 @@
 package com.testforge.result.service;
 
+import com.testforge.analytics.service.WeaknessService;
 import com.testforge.exam.entity.Exam;
 import com.testforge.exam.entity.ExamQuestion;
 import com.testforge.exam.repository.ExamQuestionRepository;
@@ -39,7 +40,7 @@ public class GradingService {
     private final ResultRepository resultRepository;
     private final StudentAnswerRepository studentAnswerRepository;
     private final UserRepository userRepository;
-
+    private final WeaknessService weaknessService;
     /**
      * @Transactional makes this whole method ALL-OR-NOTHING. It performs many
      * inserts (one Result + one StudentAnswer per question). If anything fails
@@ -107,6 +108,8 @@ public class GradingService {
         // 7) Store the final score on the Result.
         result.setFinalScore(score);
         resultRepository.save(result);
+       
+		weaknessService.analyzeAfterSubmission(result.getResultId());
 
         // 8) Compute the derived numbers and the verdict.
         //    100.0 (a double!) avoids integer division giving 0.
