@@ -21,6 +21,9 @@ import Login from './auth/Login'
 import Register from './auth/Register'
 import ProtectedRoute from './auth/ProtectedRoute'
 import { getSession } from './auth/authService'
+import Topics from './admin/Topics'
+import Questions from './admin/Questions'
+import ManageExams from './admin/ManageExams'
 
 // >>> PERSON B: add your imports here (Topics, Questions, ManageExams)
 // >>> PERSON C: add your imports here (StudentDashboard, ExamAttempt, Result, ResultDetail, History)
@@ -45,6 +48,9 @@ export default function App() {
 
         {/* ---- Admin area (login + ADMIN role required) ---- */}
         <Route path="/admin" element={<ProtectedRoute adminOnly><AdminHome /></ProtectedRoute>} />
+        <Route path="/admin/topics" element={<ProtectedRoute adminOnly><Topics /></ProtectedRoute>} />
+        <Route path="/admin/questions" element={<ProtectedRoute adminOnly><Questions /></ProtectedRoute>} />
+        <Route path="/admin/exams" element={<ProtectedRoute adminOnly><ManageExams /></ProtectedRoute>} />
         {/* >>> PERSON B: add /admin/topics  /admin/questions  /admin/exams here */}
         {/* >>> PERSON D: replace AdminHome with your AdminDashboard, add /admin/reminders */}
       </Routes>
